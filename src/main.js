@@ -1,5 +1,9 @@
 import Phaser from './lib/phaser.js';
+import { BootScene } from './scenes/boot-scene.js';
+import { PreloadScene } from './scenes/preload-scene.js';
 import { GameScene } from './scenes/game-scene.js';
+
+const speedDown = 50;
 
 const game = new Phaser.Game({
   type: Phaser.CANVAS,
@@ -16,11 +20,13 @@ const game = new Phaser.Game({
   physics: {
     default: 'arcade',
     arcade: {
-      gravity: { y: 0, x: 0 },
+      gravity: { y: speedDown, x: 0 },
       debug: true,
     },
   },
 });
 
+game.scene.add('BootScene', BootScene);
+game.scene.add('PreloadScene', PreloadScene);
 game.scene.add('GameScene', GameScene);
-game.scene.start('GameScene');
+game.scene.start('BootScene');

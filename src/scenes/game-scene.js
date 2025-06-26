@@ -34,7 +34,7 @@ export class GameScene extends Phaser.Scene {
     // spawn sprite
     const x = Phaser.Math.Between(50, 400); // random x position
     const y = -50; // start above screen
-    const velocity = Phaser.Math.Between(50, 100);
+    const velocity = Phaser.Math.Between(30, 60); // random velocity
     const sprite = this.physics.add
       .sprite(x, y, 'slime')
       .setMaxVelocity(velocity)
@@ -53,24 +53,57 @@ export class GameScene extends Phaser.Scene {
     this.enemies.push({ sprite, label, word });
   }
 
-  checkTypedWord() {
-    // TODO: prioritize enemies closer to player (lower Y coordinates)
-    const matchIndex = this.enemies.findIndex((enemy) => enemy.word === this.typedText);
+  startGameTimer() {
+    this.time.addEvent({
+      delay: 1000,
+      callback: () => {
+        this.elapsedSeconds++;
+        this.timerText.setText('Time: ' + this.elapsedSeconds + 's');
 
-    if (matchIndex !== -1) {
+        // calculate wpm
+        this.wpm = this.charactersTyped / 5 / (this.elapsedSeconds / 60);
+      },
+      loop: true,
+    });
+  }
+
+  checkTypedWord() {
+    let matchedEnemyIndex = -1;
+    let maxY = -Infinity;
+
+    // Loop through all enemies to find the matching one with the lowest Y (i.e., closest to player)
+    for (let i = 0; i < this.enemies.length; i++) {
+      const enemy = this.enemies[i];
+      if (enemy.word === this.typedText && enemy.sprite.y > maxY) {
+        maxY = enemy.sprite.y;
+        matchedEnemyIndex = i;
+      }
+    }
+
+    if (matchedEnemyIndex !== -1) {
       // Match found!
-      const enemy = this.enemies[matchIndex];
+      const enemy = this.enemies[matchedEnemyIndex];
+      const numCharacters = enemy.word.length;
 
       // Remove sprite and label
       enemy.sprite.destroy();
       enemy.label.destroy();
 
       // Remove from array
-      this.enemies.splice(matchIndex, 1);
+      this.enemies.splice(matchedEnemyIndex, 1);
 
       // TODO: Add effects
+      // increase respective counters
+      this.wordsTyped += 1;
+      this.charactersTyped += numCharacters;
       this.score += 10;
       this.scoreText.setText('Score: ' + this.score);
+
+      // ⏱️ Start timer if this is the first word
+      if (!this.timerStarted) {
+        this.timerStarted = true;
+        this.startGameTimer();
+      }
       // this.sound.play('hit');
     }
 
@@ -82,6 +115,13 @@ export class GameScene extends Phaser.Scene {
   gameOver() {
     this.add
       .text(230, 300, 'GAME OVER', {
+        fontSize: '40px',
+        color: '#f00',
+        fontFamily: 'monospace',
+      })
+      .setOrigin(0.5);
+    this.add
+      .text(230, 360, `WPM: ${Math.round(this.wpm)}`, {
         fontSize: '40px',
         color: '#f00',
         fontFamily: 'monospace',
@@ -103,18 +143,32 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
-    // draw ui
+    // draw background
     this.add.image(0, 0, 'bg').setScale(0.6).setOrigin(0, 0);
+
+    // setup score counters for statistics
+    this.wordsTyped = 0;
+    this.charactersTyped = 0;
     this.score = 0;
     this.scoreText = this.add.text(10, 10, `Score: ${this.score}`, {
       fontSize: '24px',
       color: '#fff',
       fontFamily: 'monospace',
     });
+    // this is the player sprite at the bottom
     // this.add.image(200, 500, 'player').setScale(0.1).setOrigin(0, 0);
 
     // set lives
     this.lives = 3;
+
+    // set timer
+    this.elapsedSeconds = 0;
+    this.timerStarted = false;
+    this.timerText = this.add.text(10, 40, 'Time: 0s', {
+      fontSize: '24px',
+      color: '#fff',
+      fontFamily: 'monospace',
+    });
 
     this.livesText = this.add.text(350, 10, 'Lives: 3', {
       fontSize: '20px',

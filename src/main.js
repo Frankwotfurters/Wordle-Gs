@@ -21,7 +21,7 @@ const game = new Phaser.Game({
     default: 'arcade',
     arcade: {
       gravity: { y: speedDown, x: 0 },
-      debug: true,
+      debug: false,
     },
   },
 });

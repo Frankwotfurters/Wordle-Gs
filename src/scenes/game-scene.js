@@ -34,7 +34,18 @@ export class GameScene extends Phaser.Scene {
     // spawn sprite
     const x = Phaser.Math.Between(50, 400); // random x position
     const y = -50; // start above screen
+
     const velocity = Phaser.Math.Between(30, 60); // random velocity
+
+    // let velocity;
+    // if (this.elapsedSeconds < 30) {
+    //   velocity = Phaser.Math.Between(10, 30); // Initial speed for the first 30 seconds
+    // } else if (this.elapsedSeconds < 60) {
+    //   velocity = Phaser.Math.Between(30, 60); // Increase speed after 30 seconds
+    // } else {
+    //   velocity = Phaser.Math.Between(60, 90); // Speed up further after 1 minute
+    // }
+
     const sprite = this.physics.add
       .sprite(x, y, 'slime')
       .setMaxVelocity(velocity)
@@ -204,11 +215,38 @@ export class GameScene extends Phaser.Scene {
       this.inputDisplay.setText(this.typedText); // show typed input
     });
 
-    // spawn enemy event
-    this.time.addEvent({
-      delay: 1000,
+    // // spawn enemy event
+    // this.time.addEvent({
+    //   delay: 1000,
+    //   callback: this.spawnEnemy,
+    //   callbackScope: this,
+    //   loop: true,
+    // });
+
+    this.spawnDelay = 2000;
+    this.minSpawnDelay = 500;
+    this.speedupRate = 100;
+    this.spawnTimer = this.time.addEvent({
+      delay: this.spawnDelay,
       callback: this.spawnEnemy,
       callbackScope: this,
+      loop: true,
+    });
+
+    this.time.addEvent({
+      delay: 10000,
+      callback: () => {
+        this.spawnDelay = Math.max(this.minSpawnDelay, this.spawnDelay - this.speedupRate);
+
+        this.spawnTimer.remove();
+
+        this.spawnTimer = this.time.addEvent({
+          delay: this.spawnDelay,
+          callback: this.spawnEnemy,
+          callbackScope: this,
+          loop: true,
+        });
+      },
       loop: true,
     });
   }

@@ -4,7 +4,6 @@ export class GameScene extends Phaser.Scene {
   constructor() {
     super({ key: 'GameScene' });
 
-    this.enemies = [];
     this.shortWords;
     this.mediumWords;
     this.longWords;
@@ -42,6 +41,7 @@ export class GameScene extends Phaser.Scene {
     const y = -50; // start above screen
 
     const velocity = Phaser.Math.Between(30, 60); // random velocity
+    // const velocity = Phaser.Math.Between(100, 150); // random velocity
 
     // let velocity;
     // if (this.elapsedSeconds < 30) {
@@ -149,41 +149,63 @@ export class GameScene extends Phaser.Scene {
   }
 
   usePowerUp() {
+    // use the current powerup
+
     if (this.currentPowerUp > 0) {
       if (this.currentPowerUp == 1) {
         // freeze
         this.updatePowerUp(0); // clear powerup
-        this.spawnTimer.paused = true;
-        this.enemySpawner.paused = true;
-        this.enemies.forEach((enemy) => {
-          console.log(enemy.word);
-          // Store original velocity
-          enemy.originalVelocity = enemy.sprite.body.velocity.clone();
-
-          // Set velocity to 0
-          enemy.sprite.setMaxVelocity(0);
-
-          // frozen effect
-          // enemy.sprite.setTint(0x66ccff);
-        });
-
-        // After duration, unfreeze
-        this.time.delayedCall(3000, () => {
-          this.enemies.forEach((enemy) => {
-            if (enemy.originalVelocity) {
-              enemy.sprite.setMaxVelocity(enemy.originalVelocity.y);
-              // enemy.sprite.clearTint();
-              delete enemy.originalVelocity; // cleanup
-            }
-          });
-          this.spawnTimer.paused = false;
-          this.enemySpawner.paused = false;
-        });
+        this.freezeEnemies(3000);
       }
     }
   }
 
+  freezeEnemies(duration = 0) {
+    // duration in ms
+    this.spawnTimer.paused = true;
+    this.enemySpawner.paused = true;
+    this.enemies.forEach((enemy) => {
+      // Store original velocity
+      enemy.originalVelocity = enemy.sprite.body.maxVelocity.y;
+
+      // Set velocity to 0
+      enemy.sprite.setMaxVelocity(0);
+
+      // frozen effect
+      // enemy.sprite.setTint(0x66ccff);
+    });
+
+    // After duration, unfreeze
+    if (duration > 0) {
+      this.time.delayedCall(duration, () => {
+        this.enemies.forEach((enemy) => {
+          if (enemy.originalVelocity) {
+            enemy.sprite.setMaxVelocity(enemy.originalVelocity.y);
+            // enemy.sprite.clearTint();
+            delete enemy.originalVelocity; // cleanup
+          }
+        });
+        this.spawnTimer.paused = false;
+        this.enemySpawner.paused = false;
+      });
+    }
+  }
+
+  unfreezeEnemies() {
+    this.enemies.forEach((enemy) => {
+      if (enemy.originalVelocity) {
+        enemy.sprite.setVelocity(enemy.originalVelocity.x, enemy.originalVelocity.y);
+        delete enemy.originalVelocity; // cleanup
+      }
+    });
+  }
+
   gameOver() {
+    // set gameover flag to true to stop the game
+    this.isGameOver = true;
+    this.freezeEnemies();
+
+    // game over texts
     this.add
       .text(230, 300, 'GAME OVER', {
         fontSize: '40px',
@@ -198,14 +220,24 @@ export class GameScene extends Phaser.Scene {
         fontFamily: 'monospace',
       })
       .setOrigin(0.5);
+    this.add
+      .text(230, 420, 'Press SPACE to Restart', {
+        fontSize: '20px',
+        color: '#aaa',
+        fontFamily: 'monospace',
+      })
+      .setOrigin(0.5);
 
-    this.scene.pause(); // stops the game
+    // Wait for spacebar to restart
+    this.input.keyboard.once('keydown-SPACE', () => {
+      this.scene.restart(); // restarts the current GameScene
+    });
   }
 
   preload() {
     // load assets
     this.load.image('bg', 'assets/images/bg.png');
-    this.load.image('player', 'assets/images/amongus.png');
+    // this.load.image('player', 'assets/images/amongus.png');
     this.load.spritesheet('slime', 'assets/images/Slime_Blue_32x32.png', { frameWidth: 32, frameHeight: 32 });
 
     this.load.json('short', 'assets/words/short.json');
@@ -214,6 +246,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    // enemies
+    this.enemies = [];
+
+    // gameover flag
+    this.isGameOver = false;
+
     // draw background
     this.add.image(0, 0, 'bg').setScale(0.6).setOrigin(0, 0);
 
@@ -317,6 +355,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   update() {
+    if (this.isGameOver) {
+      return;
+    }
     // update enemies
     this.enemies.forEach((enemyObj, index) => {
       const { sprite, label } = enemyObj;

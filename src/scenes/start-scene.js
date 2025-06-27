@@ -9,7 +9,7 @@ export class StartScene extends Phaser.Scene {
     const { width, height } = this.scale;
 
     this.add
-      .text(width / 2, height / 2 - 50, 'Typing Game', {
+      .text(width / 2, height / 2 - 50, 'Type Rangers', {
         fontSize: '32px',
         color: '#fff',
         fontFamily: 'monospace',
@@ -24,7 +24,7 @@ export class StartScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    // Optional: blink effect
+    // blink effect
     this.tweens.add({
       targets: startText,
       alpha: { from: 1, to: 0.3 },

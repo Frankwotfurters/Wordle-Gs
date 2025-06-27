@@ -1,6 +1,7 @@
 import Phaser from './lib/phaser.js';
 import { BootScene } from './scenes/boot-scene.js';
 import { PreloadScene } from './scenes/preload-scene.js';
+import { StartScene } from './scenes/start-scene.js';
 import { GameScene } from './scenes/game-scene.js';
 
 const speedDown = 50;
@@ -28,5 +29,6 @@ const game = new Phaser.Game({
 
 game.scene.add('BootScene', BootScene);
 game.scene.add('PreloadScene', PreloadScene);
+game.scene.add('StartScene', StartScene);
 game.scene.add('GameScene', GameScene);
 game.scene.start('BootScene');

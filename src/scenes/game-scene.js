@@ -28,6 +28,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   spawnEnemy() {
+    // enemy id
+    const id = this.nextEnemyId;
+    const hasPowerUp = id > 10 && id % 10 == 0; // boolean. every 10 enemies, give them a powerup to hold
+
+    const powerUp = hasPowerUp ? 1 : 0; // id of powerup, 1 is freeze for example
+
     // randomize a word
     const word = this.getNextWord('medium');
 
@@ -55,13 +61,16 @@ export class GameScene extends Phaser.Scene {
     // add the word above the sprite
     const label = this.add.text(x, y - 20, word, {
       fontSize: '16px',
-      color: '#ffffff',
+      color: hasPowerUp ? '#ADD8E6' : '#ffffff',
       fontFamily: 'monospace',
     });
     label.setOrigin(0.5, 1);
 
     // store enemy data
-    this.enemies.push({ sprite, label, word });
+    this.enemies.push({ id, sprite, label, word, powerUp });
+
+    // increment id
+    this.nextEnemyId++;
   }
 
   startGameTimer() {
@@ -95,6 +104,7 @@ export class GameScene extends Phaser.Scene {
       // Match found!
       const enemy = this.enemies[matchedEnemyIndex];
       const numCharacters = enemy.word.length;
+      const powerUp = enemy.powerUp;
 
       // Remove sprite and label
       enemy.sprite.destroy();
@@ -103,6 +113,11 @@ export class GameScene extends Phaser.Scene {
       // Remove from array
       this.enemies.splice(matchedEnemyIndex, 1);
 
+      // get power up if any
+      if (this.currentPowerUp == 0 && powerUp > 0) {
+        this.updatePowerUp(powerUp);
+      }
+
       // TODO: Add effects
       // increase respective counters
       this.wordsTyped += 1;
@@ -110,7 +125,7 @@ export class GameScene extends Phaser.Scene {
       this.score += 10;
       this.scoreText.setText('Score: ' + this.score);
 
-      // ⏱️ Start timer if this is the first word
+      // start timer if this is the first word
       if (!this.timerStarted) {
         this.timerStarted = true;
         this.startGameTimer();
@@ -121,6 +136,51 @@ export class GameScene extends Phaser.Scene {
     // Reset input
     this.typedText = '';
     this.inputDisplay.setText('');
+  }
+
+  updatePowerUp(powerUpId) {
+    this.currentPowerUp = powerUpId;
+    if (powerUpId == 0) {
+      this.powerUpText.setText(`Power Up:\n`);
+    }
+    if (powerUpId == 1) {
+      this.powerUpText.setText(`Power Up:\nFreeze`);
+    }
+  }
+
+  usePowerUp() {
+    if (this.currentPowerUp > 0) {
+      if (this.currentPowerUp == 1) {
+        // freeze
+        this.updatePowerUp(0); // clear powerup
+        this.spawnTimer.paused = true;
+        this.enemySpawner.paused = true;
+        this.enemies.forEach((enemy) => {
+          console.log(enemy.word);
+          // Store original velocity
+          enemy.originalVelocity = enemy.sprite.body.velocity.clone();
+
+          // Set velocity to 0
+          enemy.sprite.setMaxVelocity(0);
+
+          // frozen effect
+          // enemy.sprite.setTint(0x66ccff);
+        });
+
+        // After duration, unfreeze
+        this.time.delayedCall(3000, () => {
+          this.enemies.forEach((enemy) => {
+            if (enemy.originalVelocity) {
+              enemy.sprite.setMaxVelocity(enemy.originalVelocity.y);
+              // enemy.sprite.clearTint();
+              delete enemy.originalVelocity; // cleanup
+            }
+          });
+          this.spawnTimer.paused = false;
+          this.enemySpawner.paused = false;
+        });
+      }
+    }
   }
 
   gameOver() {
@@ -169,9 +229,6 @@ export class GameScene extends Phaser.Scene {
     // this is the player sprite at the bottom
     // this.add.image(200, 500, 'player').setScale(0.1).setOrigin(0, 0);
 
-    // set lives
-    this.lives = 3;
-
     // set timer
     this.elapsedSeconds = 0;
     this.timerStarted = false;
@@ -181,11 +238,24 @@ export class GameScene extends Phaser.Scene {
       fontFamily: 'monospace',
     });
 
+    // set lives
+    this.lives = 3;
+
     this.livesText = this.add.text(350, 10, 'Lives: 3', {
       fontSize: '20px',
       color: '#fff',
       fontFamily: 'monospace',
     });
+
+    // setup powerups
+    this.currentPowerUp = 0;
+
+    this.powerUpText = this.add.text(350, 580, `Power Up:\n}`, {
+      fontSize: '20px',
+      color: '#fff',
+      fontFamily: 'monospace',
+    });
+    this.updatePowerUp(1);
 
     // setup wordlists
     this.shortWords = this.cache.json.get('short').words;
@@ -208,6 +278,8 @@ export class GameScene extends Phaser.Scene {
         this.typedText = this.typedText.slice(0, -1);
       } else if (key === ' ' || key === 'Enter') {
         this.checkTypedWord();
+      } else if (key === 'Shift') {
+        this.usePowerUp();
       } else if (/^[a-zA-Z]$/.test(key)) {
         this.typedText += key.toLowerCase();
       }
@@ -215,17 +287,10 @@ export class GameScene extends Phaser.Scene {
       this.inputDisplay.setText(this.typedText); // show typed input
     });
 
-    // // spawn enemy event
-    // this.time.addEvent({
-    //   delay: 1000,
-    //   callback: this.spawnEnemy,
-    //   callbackScope: this,
-    //   loop: true,
-    // });
-
     this.spawnDelay = 2000;
     this.minSpawnDelay = 500;
     this.speedupRate = 100;
+    this.nextEnemyId = 0;
     this.spawnTimer = this.time.addEvent({
       delay: this.spawnDelay,
       callback: this.spawnEnemy,
@@ -233,7 +298,7 @@ export class GameScene extends Phaser.Scene {
       loop: true,
     });
 
-    this.time.addEvent({
+    this.enemySpawner = this.time.addEvent({
       delay: 10000,
       callback: () => {
         this.spawnDelay = Math.max(this.minSpawnDelay, this.spawnDelay - this.speedupRate);

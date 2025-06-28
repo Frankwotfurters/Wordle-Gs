@@ -122,7 +122,16 @@ export class GameScene extends Phaser.Scene {
       // increase respective counters
       this.wordsTyped += 1;
       this.charactersTyped += numCharacters;
-      this.score += 10;
+
+      // increase score with combo points
+      let basePoints = 10;
+      let comboBonus = 0;
+
+      if (this.comboCount >= this.comboThreshold) {
+        comboBonus = Math.floor(this.comboCount / this.comboThreshold) * 5; // +5 per threshold
+      }
+
+      this.score += basePoints + comboBonus;
       this.scoreText.setText('Score: ' + this.score);
 
       // start timer if this is the first word
@@ -307,6 +316,16 @@ export class GameScene extends Phaser.Scene {
       fontFamily: 'monospace',
     });
 
+    // combo feature
+    this.comboCount = 0;
+    // this.maxCombo = 0; // to keep track of max combo
+    this.comboThreshold = 15; // example: bonus after 15 characters
+    this.comboText = this.add.text(180, 10, 'Combo: 0', {
+      fontSize: '20px',
+      color: '#ffff00',
+      fontFamily: 'monospace',
+    });
+
     // capture keyboard input
     this.typedText = '';
     this.input.keyboard.on('keydown', (event) => {
@@ -314,17 +333,25 @@ export class GameScene extends Phaser.Scene {
 
       if (key === 'Backspace') {
         this.typedText = this.typedText.slice(0, -1);
+        this.comboCount = 0; // reset combo on backspace
       } else if (key === ' ' || key === 'Enter') {
         this.checkTypedWord();
       } else if (key === 'Shift') {
         this.usePowerUp();
       } else if (/^[a-zA-Z]$/.test(key)) {
         this.typedText += key.toLowerCase();
+        this.comboCount += 1; // increment combo streak
+        // for keeping track of max combo streak
+        // if (this.comboCount > this.maxCombo) {
+        //   this.maxCombo = this.comboCount;
+        // }
       }
 
       this.inputDisplay.setText(this.typedText); // show typed input
+      this.comboText.setText('Combo: ' + this.comboCount); // show combo
     });
 
+    // level scaling
     this.spawnDelay = 2000;
     this.minSpawnDelay = 500;
     this.speedupRate = 100;

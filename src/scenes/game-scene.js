@@ -74,7 +74,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   startGameTimer() {
-    this.time.addEvent({
+    return this.time.addEvent({
       delay: 1000,
       callback: () => {
         this.elapsedSeconds++;
@@ -137,9 +137,12 @@ export class GameScene extends Phaser.Scene {
       // start timer if this is the first word
       if (!this.timerStarted) {
         this.timerStarted = true;
-        this.startGameTimer();
+        this.gameTimer = this.startGameTimer();
       }
       // this.sound.play('hit');
+    } else {
+      // word not found
+      this.comboCount = 0;
     }
 
     // Reset input
@@ -150,10 +153,10 @@ export class GameScene extends Phaser.Scene {
   updatePowerUp(powerUpId) {
     this.currentPowerUp = powerUpId;
     if (powerUpId == 0) {
-      this.powerUpText.setText(`Power Up:\n`);
+      this.powerUpText.setText(`(Shift)\nPower Up:\n`);
     }
     if (powerUpId == 1) {
-      this.powerUpText.setText(`Power Up:\nFreeze`);
+      this.powerUpText.setText(`(Shift)\nPower Up:\nFreeze`);
     }
   }
 
@@ -189,7 +192,7 @@ export class GameScene extends Phaser.Scene {
       this.time.delayedCall(duration, () => {
         this.enemies.forEach((enemy) => {
           if (enemy.originalVelocity) {
-            enemy.sprite.setMaxVelocity(enemy.originalVelocity.y);
+            enemy.sprite.setMaxVelocity(enemy.originalVelocity);
             // enemy.sprite.clearTint();
             delete enemy.originalVelocity; // cleanup
           }
@@ -203,7 +206,7 @@ export class GameScene extends Phaser.Scene {
   unfreezeEnemies() {
     this.enemies.forEach((enemy) => {
       if (enemy.originalVelocity) {
-        enemy.sprite.setVelocity(enemy.originalVelocity.x, enemy.originalVelocity.y);
+        enemy.sprite.setVelocity(enemy.originalVelocity.y);
         delete enemy.originalVelocity; // cleanup
       }
     });
@@ -213,6 +216,7 @@ export class GameScene extends Phaser.Scene {
     // set gameover flag to true to stop the game
     this.isGameOver = true;
     this.freezeEnemies();
+    this.gameTimer.paused = true;
 
     // game over texts
     this.add
@@ -297,7 +301,7 @@ export class GameScene extends Phaser.Scene {
     // setup powerups
     this.currentPowerUp = 0;
 
-    this.powerUpText = this.add.text(350, 580, `Power Up:\n}`, {
+    this.powerUpText = this.add.text(350, 580, `(Shift)\nPower Up:\n}`, {
       fontSize: '20px',
       color: '#fff',
       fontFamily: 'monospace',
